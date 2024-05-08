@@ -1,6 +1,7 @@
 package br.com.lucasftrts.screammatch.main;
 
 import br.com.lucasftrts.screammatch.models.EpisodeData;
+import br.com.lucasftrts.screammatch.models.Episodes;
 import br.com.lucasftrts.screammatch.models.SeasonData;
 import br.com.lucasftrts.screammatch.models.SeriesData;
 import br.com.lucasftrts.screammatch.services.ApiRequest;
@@ -8,9 +9,10 @@ import br.com.lucasftrts.screammatch.services.DataConverter;
 
 import java.io.IOException;
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Main {
     private Scanner reader = new Scanner(System.in);
@@ -47,7 +49,57 @@ public class Main {
             });
         });
 
+        List<EpisodeData> episodesData = seasons.stream().flatMap(t -> t.episodes().stream()).collect(Collectors.toList());
+        System.out.println("top 5 episodios");
+        episodesData.stream()
+                .filter(e -> !e.avaliacao().equals("N/A"))
+                .sorted(Comparator.comparing(EpisodeData::avaliacao)
+                        .reversed())
+                        .limit(5)
+                        .forEach(System.out::println);
 
+        List<Episodes> episodes = seasons
+                    .stream()
+                    .flatMap(t -> t.episodes().stream().map(d -> new Episodes(t.number(), d)))
+                    .collect(Collectors.toList());
+
+        System.out.println("digite o titulo a encontrar:\n");
+        var searching = reader.nextLine();
+        var episode = episodes.stream()
+                .filter(e -> e.getTitle().toUpperCase().contains(searching.toUpperCase()))
+                .findFirst();
+        if(episode.isPresent()){
+            System.out.println("episodio encontrado: ");
+            System.out.println("temporada do episodio" + episode.get().getSeason());
+        }else{
+            System.out.println("Episodio nao encontrado");
+        }
+
+        Map<Integer, Double> seasonAvaliation = episodes
+                                .stream()
+                                .filter(e -> e.getAvaliacao() > 0.0)
+                                .collect(Collectors.groupingBy(Episodes::getSeason, Collectors.averagingDouble(Episodes::getAvaliacao)));
+
+        System.out.println(seasonAvaliation);
+
+        DoubleSummaryStatistics est = episodes.stream().filter(e -> e.getAvaliacao() > 0.0).collect(Collectors.summarizingDouble(Episodes::getAvaliacao));
+
+        System.out.println("Média " + est.getAverage() + " Melhor episodio: " + est.getMax() + " Pior episodio: " + est.getMin() + " quantidade avaliada " + est.getCount());
+
+//        episodes.forEach(System.out::println);
+//
+//        System.out.println("a partir de que ano você deseja ver os episodios?");
+//        var year = reader.nextInt();
+//        reader.nextLine();
+//
+//        LocalDate dateSearch = LocalDate.of(year, 1, 1);
+//        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+//        episodes
+//                .stream()
+//                .filter(e ->e.getReleaseDate() != null && e.getReleaseDate().isAfter(dateSearch))
+//                .forEach(e -> System.out.println("Season: " + e.getSeason()
+//                        + " Episode: " + e.getNumber()
+//                        + " Release date: " + e.getReleaseDate().format(formatter)));
 
     }
 
